@@ -3,36 +3,36 @@
  ? Bind to socket and listen for client message.
 
  Project by Abhinav Robinson
+ Comments & Print statements by Ashok Kumar
 """
 
 
 # Import python socket, random, sympy, hashlib, pickle module
 import socket, random, sympy, hashlib, pickle
-
+print("initialised model")
 
 # Connect and recieve message
 def recieve():
 
     # Define prime upper bound
     PRIME_LIMIT = 1000000000000
-
+    print("limit = 1000000000000")
     # Generate Key Pair
     e,d,n = generate(sympy.randprime(1,PRIME_LIMIT),sympy.randprime(1,PRIME_LIMIT))
-
+    print("keys generated")
     print(f"Encryption Key: {e} \n Mod Key: {n} \n Secret Key: {d}")
-
+ 
     # Initialize socket stream
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
+    print("socket initialised")
     # Specify port
     port = 6000
-
+    print("post: 6000, binding to port")
     # Bind to port 
     s.bind((socket.gethostname(), port))
-
+    
     # Listen for 1 client connection
     s.listen(1)
-
     # Server init message
     print(f"Server initialised and listening to Port:{port}")
 
@@ -178,5 +178,6 @@ def isPrime(num):
 
 # Run function for connection
 recieve()
+print("receiving")
 
 # End of server.py
