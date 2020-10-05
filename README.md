@@ -20,9 +20,17 @@ Encrypt message and generate signature on Sender, and decrypt and ensure message
 - [X] Encrypt using RSA  
 - [X] Client side decryption  
 - [X] Show validation messages
+- [X] Added DEBUG features
+
+## TODO
+
+- [ ] Move prime number generation out of server to generate_keys.
+- [ ] Remove enter PRIME_LIMIT function.
+- [ ] Abstract code and genralise.
 
 ## Possible Addons (contributions)
 
-- [ ] Testing Scripts. (medium)
-- [ ] Rework to use __DEBUG__ python for debug messages. (easy)
-- [ ] Add more comments for documentation. (supa-ez)
+- [ ] Refactor code to a more Stateful paradigm? (Hard) #3
+- [ ] Testing Scripts. (medium) #2
+- [X] Rework __DEBUG__ python for additional debug features. (medium) #1
+- [ ] Add more comments for documentation. (supa-ez) #0
