@@ -1,47 +1,42 @@
 """
  ! SERVER File
- ? Bind to socket and listen for client message.
+ ? Bind to socket and listen for client message, decrypt client message and provide encryption keys
 
  Project by Abhinav Robinson
 """
 
 
 # Import python socket, random, sympy, hashlib, pickle module
-import socket, random, sympy, hashlib, pickle
+import hashlib
+import pickle # Pickle arrays to transport over sockets
+import random
+import socket
+import sympy # Sympy is imported to generate prime numbers efficiently
+
+#Local import to generate keys
+from generate_keys import generate
+
 
 # Connect and recieve message
-def recieve():
+def server_init():
 
     # Take prime upper bound
-    PRIME_LIMIT = int(input("Enter PRIME the upper bound (1000,1000000000) - (Higher is better): "))
-   
+    if __debug__ == True: PRIME_LIMIT = int(input("Enter PRIME the upper bound (1000,1000000000) - (Higher is better): "))
+    else: PRIME_LIMIT = 6000
+
     # Generate Key Pair
-    e,d,n = generate(sympy.randprime(1,PRIME_LIMIT),sympy.randprime(1,PRIME_LIMIT))
+    e, d, n = generate(sympy.randprime(1, PRIME_LIMIT),
+                       sympy.randprime(1, PRIME_LIMIT))
 
     # Show keys
-    print(f"Encryption Key: {e} \n Mod Key: {n} \n Secret Key: {d}")
+    assert __debug__ ,f"Encryption Key: {e} \n Mod Key: {n} \n Secret Key: {d}"
 
-    # Initialize socket stream
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    
-    # Indicate initialisation
-    print("Socket stream initialised as TCP/IP")
-    
-    # Specify port
-    port = 6000
-    
-    # Bind to port 
-    s.bind((socket.gethostname(), port))
-
-    # Listen for 1 client connection
-    s.listen(1)
-
-    # Server init message
-    print(f"Server initialised and listening to Port:{port}")
+    # Initialize socket
+    s = socket_init(port=6000, clients=1)
 
     # Listen for client message
     while True:
- 
+
         # Get client socket and address
         clientsocket, address = s.accept()
 
@@ -49,26 +44,26 @@ def recieve():
         print(f"Connection to {address} established!")
 
         # Send Encryption key (public)
-        clientsocket.send(bytes(str(e),"utf-8"))
+        clientsocket.send(bytes(str(e), "utf-8"))
 
         # Send Mod Key (public)
-        clientsocket.send(bytes(str(n),"utf-8"))
-  
+        clientsocket.send(bytes(str(n), "utf-8"))
+
         # Recieve pickle data stream
         data_string = clientsocket.recv(4096)
 
-        # Recieve Original Hex value (debug for verification)
-        hex_encoded = clientsocket.recv(1024)
+        if __debug__ == True:
+            # Recieve Original Hex value (debug for verification)
+            hex_encoded = clientsocket.recv(1024)
 
-        # Decode Hex from UTF-8
-        public_hex_value = hex_encoded.decode("utf-8")
+            # Decode Hex from UTF-8
+            public_hex_value = hex_encoded.decode("utf-8")
 
         # Pickle -> array
         signed_msg = pickle.loads(data_string)
 
         # Give confirmation
-        print(f"Authentication Status: True \n Recieved: {signed_msg}")
-
+        assert __debug__, f"Authentication Status: True \n Recieved: {signed_msg}"
         # Decrypt using private key
         hex_value = decrypt(signed_msg, d, n)
 
@@ -76,110 +71,74 @@ def recieve():
         print(f"Decrypted Hash Value: {hex_value}")
 
         # Integrity Check
-        if hex_value == public_hex_value: 
+        if hex_value == public_hex_value and __debug__ == True:
             # Success
             print("Integrity Status : True")
+            break
+        else: 
+            # Debug might be FALSE
+            print("Integrity Status : Not Verified")
             break
     #End of while loop
 
     # Close Connections / Cleanup
     clientsocket.close()
     s.close()
-    
+
 # EOF
 
 
 # Decrpytes Hex from RSA Scheme
-def decrypt(ctext,d,n):
+def decrypt(ctext, d, n):
 
     try:
         # Decrypt Hex Array from Encrypted Array
-        text = [chr(pow(int(char),d,n)) for char in ctext]
+        text = [chr(pow(int(char), d, n)) for char in ctext]
 
         # Returns String
         return "".join(text)
 
     # Catch Exception
-    except TypeError as e: print(e)
+    except TypeError as e:
+        print(e)
 
 # EOF
 
 
-### GENERATE PUBLIC PRIVATE KEY (UNCOMMENTED) ###
+# Initializes socket at given port of n clients
+def socket_init(port = 6000, clients = 1):
 
-def generate(p_num1,p_num2,key_size = 128):
-    
-    n = p_num1 * p_num2
-    tot = (p_num1 - 1) * (p_num2 - 1)
-    
-    e = generatePublicKey(tot,key_size)
-    d = generatePrivateKey(e,tot)
+    # Initialize socket stream
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-    return e,d,n
+    # Indicate initialisation
+    print("Socket stream initialised as TCP/IP")
 
+    # Specify port
+    server_port = port
 
-def generatePublicKey(tot,key_size):
-   
-    e = random.randint(2**(key_size-1),2**key_size - 1)
-    g = gcd(e,tot)
-    
-    while g != 1:
+    # Bind to port
+    sock.bind((socket.gethostname(), server_port))
 
-        e = random.randint(2**(key_size-1),2**key_size - 1)
-        g = gcd(e,tot)
+    # Listen for 1 client connection
+    sock.listen(clients)
 
-    return e
+    # Server init message
+    print(f"Server initialised and listening to Port:{server_port}")
 
+    # return socket
+    return sock
 
-def generatePrivateKey(e,tot):
-    
-    d = egcd(e,tot)[1]
-    d = d % tot
-    
-    if d < 0 : d += tot
-    
-    return d
-
-
-def egcd(a,b):
-    
-    if a == 0: return (b, 0, 1)
-    else: g, y, x = egcd(b % a, a)
-    
-    return (g, x - (b // a) * y, y)
-
-
-def gcd(e,tot):
-     
-    temp = 0
-    
-    while True:
-        
-        temp = e % tot
-        
-        if temp == 0: return tot
-        
-        e = tot
-        tot = temp
-
-
-def isPrime(num):
-     
-    if num < 2 : return False
-    if num == 2 : return True
-    if num & 0x01 == 0 : return False
-    
-    n = int(num ** 0.5 )
-    
-    for i in range(3,n,2):
-        if num % i == 0: return False
-
-    return True
-
-### End Of Key Generation ###
+# EOF
 
 
 # Run function for connection
-recieve()
+try:
+    server_init()
+except AssertionError as AE:
+    print("Internal Server Error : Debug Failure")
+finally:
+    print("Server successfully closed.")
+
 
 # End of server.py
